@@ -68,15 +68,11 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       });
     }
 
-    console.log(`Processing audio file: ${req.file.filename}`);
-
     // Step 1: Transcribe audio using Whisper
     const transcription = await openaiService.transcribeAudio(req.file.path);
-    console.log(`Transcription: ${transcription}`);
 
     // Step 2: Translate to Spanish using GPT
     const translation = await openaiService.translateToSpanish(transcription);
-    console.log(`Translation: ${translation}`);
 
     // Clean up uploaded file
     fs.unlink(req.file.path, (err) => {

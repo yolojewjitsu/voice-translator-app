@@ -17,7 +17,6 @@ async function transcribeAudio(audioFilePath) {
       throw new Error('Audio file not found');
     }
 
-    console.log(`Transcribing audio file: ${audioFilePath}`);
 
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(audioFilePath),
@@ -48,7 +47,6 @@ async function translateToSpanish(englishText) {
       throw new Error('No text provided for translation');
     }
 
-    console.log(`Translating text: "${englishText}"`);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',

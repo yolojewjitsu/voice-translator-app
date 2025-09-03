@@ -45,7 +45,6 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionStart, onTransc
       streamRef.current = stream;
       return stream;
     } catch (err) {
-      console.error('Error accessing microphone:', err);
       setHasPermission(false);
       
       let errorMessage = 'Failed to access microphone.';
@@ -97,7 +96,6 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionStart, onTransc
         throw new Error(result.error || 'Failed to process audio');
       }
     } catch (err) {
-      console.error('Error sending audio to backend:', err);
       
       let errorMessage = 'Failed to translate audio.';
       
@@ -156,7 +154,6 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionStart, onTransc
       setIsRecording(true);
       startTimer();
     } catch (err) {
-      console.error('Error starting recording:', err);
       setError(err.message || 'Failed to start recording');
     }
   }, [requestMicrophonePermission, startTimer, sendAudioToBackend]);
