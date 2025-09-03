@@ -15,7 +15,7 @@ A full-stack voice translation application that records English speech, transcri
 
 ### 1️⃣ Clone & Setup
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/yolojewjitsu/voice-translator-app
 cd voice-translator-app
 ```
 
