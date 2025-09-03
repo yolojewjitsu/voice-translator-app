@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 
-const AudioRecorder = ({ onTranscriptionComplete, isLoading }) => {
+const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionStart, onTranscriptionError, isLoading }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -60,6 +60,66 @@ const AudioRecorder = ({ onTranscriptionComplete, isLoading }) => {
     }
   }, []);
 
+  const sendAudioToBackend = useCallback(async (audioBlob) => {
+    try {
+      // Notify parent that processing has started
+      if (onTranscriptionStart) {
+        onTranscriptionStart();
+      }
+
+      const formData = new FormData();
+      formData.append('audio', audioBlob, `recording-${Date.now()}.webm`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+
+      if (result.success) {
+        onTranscriptionComplete({
+          originalText: result.originalText,
+          translation: result.translation,
+          audioURL: audioURL
+        });
+      } else {
+        throw new Error(result.error || 'Failed to process audio');
+      }
+    } catch (err) {
+      console.error('Error sending audio to backend:', err);
+      
+      let errorMessage = 'Failed to translate audio.';
+      
+      if (err.name === 'AbortError') {
+        errorMessage = 'Request timed out. Please try again with a shorter recording.';
+      } else if (err.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.message.includes('Server error')) {
+        errorMessage = 'Server error. Please try again in a moment.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      
+      // Notify parent about the error
+      if (onTranscriptionError) {
+        onTranscriptionError(errorMessage);
+      }
+    }
+  }, [onTranscriptionComplete, onTranscriptionStart, onTranscriptionError, audioURL]);
+
   const startRecording = useCallback(async () => {
     try {
       setError(null);
@@ -100,37 +160,6 @@ const AudioRecorder = ({ onTranscriptionComplete, isLoading }) => {
       setError(err.message || 'Failed to start recording');
     }
   }, [requestMicrophonePermission, startTimer, sendAudioToBackend]);
-
-  const sendAudioToBackend = useCallback(async (audioBlob) => {
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, `recording-${Date.now()}.webm`);
-
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || `Server error: ${response.status}`);
-      }
-
-      if (result.success) {
-        onTranscriptionComplete({
-          originalText: result.originalText,
-          translation: result.translation,
-          audioURL: audioURL
-        });
-      } else {
-        throw new Error(result.error || 'Failed to process audio');
-      }
-    } catch (err) {
-      console.error('Error sending audio to backend:', err);
-      setError(`Failed to translate audio: ${err.message}`);
-    }
-  }, [onTranscriptionComplete, audioURL]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
